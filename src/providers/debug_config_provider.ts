@@ -10,6 +10,7 @@ import { config } from "../config";
 import { DartDebugSession } from "../debug/dart_debug_impl";
 import { DartTestDebugSession } from "../debug/dart_test_debug_impl";
 import { FlutterDebugSession } from "../debug/flutter_debug_impl";
+import { FlutterMultiReloadDebugSession } from "../debug/flutter_multi_reload_debug_impl";
 import { FlutterTestDebugSession } from "../debug/flutter_test_debug_impl";
 import { FlutterLaunchRequestArguments, forceWindowsDriveLetterToUppercase, isWithinPath } from "../debug/utils";
 import { FlutterCapabilities } from "../flutter/capabilities";
@@ -123,7 +124,7 @@ export class DebugConfigProvider implements DebugConfigurationProvider {
 		const canPubRunTest = isTest && debugConfig.cwd && projectSupportsPubRunTest(debugConfig.cwd as string);
 		if (isTest && !canPubRunTest)
 			log(`Project does not appear to support 'pub run test', will use VM directly`);
-		const debugType = isFlutter
+		let debugType = isFlutter
 			? (isTest ? DebuggerType.FlutterTest : DebuggerType.Flutter)
 			: (isTest && canPubRunTest ? DebuggerType.PubTest : DebuggerType.Dart);
 		log(`Using ${DebuggerType[debugType]} debug adapter for this session`);
@@ -155,6 +156,9 @@ export class DebugConfigProvider implements DebugConfigurationProvider {
 
 		// TODO: This cast feels nasty?
 		this.setupDebugConfig(folder, debugConfig as any as FlutterLaunchRequestArguments, isFlutter, deviceId);
+
+		if (debugType === DebuggerType.Flutter && debugConfig.deviceId === "all")
+			debugType = DebuggerType.FlutterMultiReload;
 
 		// Debugger always uses uppercase drive letters to ensure our paths have them regardless of where they came from.
 		debugConfig.program = forceWindowsDriveLetterToUppercase(debugConfig.program);
@@ -244,6 +248,8 @@ export class DebugConfigProvider implements DebugConfigurationProvider {
 		switch (debugType) {
 			case DebuggerType.Flutter:
 				return this.spawnOrGetServer("flutter", port, () => new FlutterDebugSession());
+			case DebuggerType.FlutterMultiReload:
+				return this.spawnOrGetServer("flutterMultiReload", port, () => new FlutterMultiReloadDebugSession());
 			case DebuggerType.FlutterTest:
 				return this.spawnOrGetServer("flutterTest", port, () => new FlutterTestDebugSession());
 			case DebuggerType.Dart:
@@ -325,4 +331,5 @@ enum DebuggerType {
 	PubTest,
 	Flutter,
 	FlutterTest,
+	FlutterMultiReload,
 }

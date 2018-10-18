@@ -69,6 +69,8 @@ class Config {
 	get previewBuildRunnerTasks() { return this.getConfig<boolean>("previewBuildRunnerTasks"); }
 	get previewToStringInDebugViews() { return this.getConfig<boolean>("previewToStringInDebugViews"); }
 	get previewPromptToRunIfErrors() { return this.getConfig<boolean>("previewPromptToRunIfErrors"); }
+	get previewLsp() { return this.getConfig<boolean>("previewLsp"); }
+	get previewLspArgs() { return this.getConfig<string[]>("previewLspVmArgs"); }
 
 	public for(uri?: Uri): ResourceConfig {
 		return new ResourceConfig(uri);

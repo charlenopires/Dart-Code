@@ -79,6 +79,7 @@ let analytics: Analytics;
 let showTodos: boolean | undefined;
 let previousSettings: string;
 let extensionLogger: { dispose: () => Promise<void> | void };
+let isUsingLsp = false;
 
 export function activate(context: vs.ExtensionContext, isRestart: boolean = false) {
 	if (!extensionLogger)
@@ -129,6 +130,7 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 
 	if (config.previewLsp && config.previewLspArgs && config.previewLspArgs.length) {
 		context.subscriptions.push(initLSP(context, sdks));
+		isUsingLsp = true;
 	}
 
 	// Fire up the analyzer process.
@@ -180,8 +182,8 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 
 	// Set up providers.
 	// TODO: Do we need to push all these to subscriptions?!
-	const hoverProvider = new DartHoverProvider(analyzer);
-	const formattingEditProvider = new DartFormattingEditProvider(analyzer);
+	const hoverProvider = isUsingLsp ? undefined : new DartHoverProvider(analyzer);
+	const formattingEditProvider = isUsingLsp ? undefined : new DartFormattingEditProvider(analyzer);
 	const completionItemProvider = new DartCompletionItemProvider(analyzer);
 	const referenceProvider = new DartReferenceProvider(analyzer);
 	const documentHighlightProvider = new DartDocumentHighlightProvider(analyzer);
@@ -201,8 +203,10 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 
 	const triggerCharacters = ".: =(${'\"/\\".split("");
 	activeFileFilters.forEach((filter) => {
-		context.subscriptions.push(vs.languages.registerHoverProvider(filter, hoverProvider));
-		context.subscriptions.push(vs.languages.registerDocumentFormattingEditProvider(filter, formattingEditProvider));
+		if (hoverProvider)
+			context.subscriptions.push(vs.languages.registerHoverProvider(filter, hoverProvider));
+		if (formattingEditProvider)
+			context.subscriptions.push(vs.languages.registerDocumentFormattingEditProvider(filter, formattingEditProvider));
 		context.subscriptions.push(vs.languages.registerCompletionItemProvider(filter, completionItemProvider, ...triggerCharacters));
 		context.subscriptions.push(vs.languages.registerDefinitionProvider(filter, referenceProvider));
 		context.subscriptions.push(vs.languages.registerReferenceProvider(filter, referenceProvider));
@@ -214,7 +218,8 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 	});
 
 	// Some actions only apply to Dart.
-	context.subscriptions.push(vs.languages.registerOnTypeFormattingEditProvider(DART_MODE, formattingEditProvider, "}", ";"));
+	if (formattingEditProvider)
+		context.subscriptions.push(vs.languages.registerOnTypeFormattingEditProvider(DART_MODE, formattingEditProvider, "}", ";"));
 	context.subscriptions.push(vs.languages.registerCodeActionsProvider(DART_MODE, sourceCodeActionProvider, sourceCodeActionProvider.metadata));
 	context.subscriptions.push(vs.languages.registerCodeActionsProvider(DART_MODE, ignoreLintCodeActionProvider, ignoreLintCodeActionProvider.metadata));
 	context.subscriptions.push(vs.languages.registerImplementationProvider(DART_MODE, implementationProvider));
@@ -239,9 +244,11 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 	const statusReporter = new AnalyzerStatusReporter(analyzer, sdks, analytics);
 
 	// Set up diagnostics.
-	const diagnostics = vs.languages.createDiagnosticCollection("dart");
-	context.subscriptions.push(diagnostics);
-	const diagnosticsProvider = new DartDiagnosticProvider(analyzer, diagnostics);
+	if (!isUsingLsp) {
+		const diagnostics = vs.languages.createDiagnosticCollection("dart");
+		context.subscriptions.push(diagnostics);
+		const diagnosticsProvider = new DartDiagnosticProvider(analyzer, diagnostics);
+	}
 
 	// Set the roots, handling project changes that might affect SDKs.
 	context.subscriptions.push(vs.workspace.onDidChangeWorkspaceFolders((f) => recalculateAnalysisRoots()));
@@ -262,7 +269,7 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 		flutterDaemon = new FlutterDaemon(path.join(sdks.flutter, flutterPath), sdks.flutter);
 		context.subscriptions.push(flutterDaemon);
 		setUpDaemonMessageHandler(context, flutterDaemon);
-		setUpHotReloadOnSave(context, diagnostics);
+		setUpHotReloadOnSave(context);
 	}
 
 	util.logTime("All other stuff before debugger..");

@@ -184,7 +184,7 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 	// TODO: Do we need to push all these to subscriptions?!
 	const hoverProvider = isUsingLsp ? undefined : new DartHoverProvider(analyzer);
 	const formattingEditProvider = isUsingLsp ? undefined : new DartFormattingEditProvider(analyzer);
-	const completionItemProvider = new DartCompletionItemProvider(analyzer);
+	const completionItemProvider = isUsingLsp ? undefined : new DartCompletionItemProvider(analyzer);
 	const referenceProvider = new DartReferenceProvider(analyzer);
 	const documentHighlightProvider = new DartDocumentHighlightProvider(analyzer);
 	const assistCodeActionProvider = new AssistCodeActionProvider(analyzer);
@@ -207,7 +207,8 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 			context.subscriptions.push(vs.languages.registerHoverProvider(filter, hoverProvider));
 		if (formattingEditProvider)
 			context.subscriptions.push(vs.languages.registerDocumentFormattingEditProvider(filter, formattingEditProvider));
-		context.subscriptions.push(vs.languages.registerCompletionItemProvider(filter, completionItemProvider, ...triggerCharacters));
+		if (completionItemProvider)
+			context.subscriptions.push(vs.languages.registerCompletionItemProvider(filter, completionItemProvider, ...triggerCharacters));
 		context.subscriptions.push(vs.languages.registerDefinitionProvider(filter, referenceProvider));
 		context.subscriptions.push(vs.languages.registerReferenceProvider(filter, referenceProvider));
 		context.subscriptions.push(vs.languages.registerDocumentHighlightProvider(filter, documentHighlightProvider));

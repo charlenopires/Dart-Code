@@ -1,11 +1,8 @@
 import * as child_process from "child_process";
 import * as path from "path";
-import { Event, OutputEvent, TerminatedEvent, DebugSession, InitializedEvent } from "vscode-debugadapter";
+import { DebugSession, InitializedEvent, OutputEvent, TerminatedEvent } from "vscode-debugadapter";
 import { DebugProtocol } from "vscode-debugprotocol";
-import { DartDebugSession } from "./dart_debug_impl";
-import { VMEvent } from "./dart_debug_protocol";
-import { FlutterRun } from "./flutter_run";
-import { FlutterLaunchRequestArguments, formatPathForVm, isWin, uriToFilePath, safeSpawn } from "./utils";
+import { FlutterLaunchRequestArguments, safeSpawn } from "./utils";
 
 export class FlutterMultiReloadDebugSession extends DebugSession {
 	protected args: FlutterLaunchRequestArguments;
@@ -69,7 +66,6 @@ export class FlutterMultiReloadDebugSession extends DebugSession {
 	}
 
 	protected spawnProcess(args: FlutterLaunchRequestArguments): any {
-		const debug = !args.noDebug;
 		let appArgs = ["run"];
 
 		if (this.sourceFile) {
@@ -80,18 +76,6 @@ export class FlutterMultiReloadDebugSession extends DebugSession {
 		if (args.deviceId) {
 			appArgs.push("-d");
 			appArgs.push(args.deviceId);
-		}
-
-		if (args.previewDart2) {
-			appArgs.push("--preview-dart-2");
-		} else if (args.previewDart2 === false) {
-			appArgs.push(`--no-preview-dart-2`);
-		}
-
-		if (args.flutterMode === "profile") {
-			appArgs.push("--profile");
-		} else if (args.flutterMode === "release") {
-			appArgs.push("--release");
 		}
 
 		if (args.args) {

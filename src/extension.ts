@@ -185,7 +185,7 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 	const hoverProvider = isUsingLsp ? undefined : new DartHoverProvider(analyzer);
 	const formattingEditProvider = isUsingLsp ? undefined : new DartFormattingEditProvider(analyzer);
 	const completionItemProvider = isUsingLsp ? undefined : new DartCompletionItemProvider(analyzer);
-	const referenceProvider = new DartReferenceProvider(analyzer);
+	const referenceProvider = isUsingLsp ? undefined : new DartReferenceProvider(analyzer);
 	const documentHighlightProvider = new DartDocumentHighlightProvider(analyzer);
 	const assistCodeActionProvider = new AssistCodeActionProvider(analyzer);
 	const fixCodeActionProvider = new FixCodeActionProvider(analyzer);
@@ -209,8 +209,10 @@ export function activate(context: vs.ExtensionContext, isRestart: boolean = fals
 			context.subscriptions.push(vs.languages.registerDocumentFormattingEditProvider(filter, formattingEditProvider));
 		if (completionItemProvider)
 			context.subscriptions.push(vs.languages.registerCompletionItemProvider(filter, completionItemProvider, ...triggerCharacters));
-		context.subscriptions.push(vs.languages.registerDefinitionProvider(filter, referenceProvider));
-		context.subscriptions.push(vs.languages.registerReferenceProvider(filter, referenceProvider));
+		if (referenceProvider) {
+			context.subscriptions.push(vs.languages.registerDefinitionProvider(filter, referenceProvider));
+			context.subscriptions.push(vs.languages.registerReferenceProvider(filter, referenceProvider));
+		}
 		context.subscriptions.push(vs.languages.registerDocumentHighlightProvider(filter, documentHighlightProvider));
 		context.subscriptions.push(vs.languages.registerCodeActionsProvider(filter, assistCodeActionProvider, assistCodeActionProvider.metadata));
 		context.subscriptions.push(vs.languages.registerCodeActionsProvider(filter, fixCodeActionProvider, fixCodeActionProvider.metadata));
